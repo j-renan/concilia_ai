@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concilia AI - Conciliação Inteligente de Fretes</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <i data-lucide="calculator"></i>
+                <span>Concilia <strong>AI</strong></span>
+            </div>
+            <p class="subtitle">Otimize sua conferência de fretes com precisão e agilidade.</p>
+        </header>
+
+        <main>
+            <!-- Step 1: Upload -->
+            <section id="step-upload" class="card active">
+                <div class="card-header">
+                    <h2><i data-lucide="upload-cloud"></i> Upload de Arquivos</h2>
+                    <p>Selecione as planilhas de crédito e frete para iniciar.</p>
+                </div>
+                
+                <div class="upload-grid">
+                    <div class="upload-box" id="drop-credito">
+                        <input type="file" id="file-credito" hidden accept=".xlsx, .xls">
+                        <i data-lucide="file-spreadsheet"></i>
+                        <p>Planilha de Crédito</p>
+                        <span class="file-name">Nenhum arquivo selecionado</span>
+                    </div>
+                    
+                    <div class="upload-box" id="drop-frete">
+                        <input type="file" id="file-frete" hidden accept=".xlsx, .xls">
+                        <i data-lucide="truck"></i>
+                        <p>Planilha de Frete</p>
+                        <span class="file-name">Nenhum arquivo selecionado</span>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="btn-next-mapping" class="btn btn-primary" disabled>
+                        Próximo Passo <i data-lucide="chevron-right"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 2: Mapping -->
+            <section id="step-mapping" class="card">
+                <div class="card-header">
+                    <h2><i data-lucide="settings-2"></i> Mapeamento de Colunas</h2>
+                    <p>Identifique as colunas correspondentes em seus arquivos.</p>
+                </div>
+
+                <div class="mapping-container">
+                    <div class="mapping-section">
+                        <h3>Planilha de Crédito</h3>
+                        <div class="form-group">
+                            <label>Histórico (Contém o número da CTe)</label>
+                            <select id="map-credito-historico" class="header-select"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Valor do Crédito</label>
+                            <select id="map-credito-valor" class="header-select"></select>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="mapping-section">
+                        <h3>Planilha de Frete</h3>
+                        <div class="form-group">
+                            <label>Número do Documento (CTe)</label>
+                            <select id="map-frete-documento" class="header-select"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Valor do Frete</label>
+                            <select id="map-frete-valor" class="header-select"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Destinatário (Opcional)</label>
+                            <select id="map-frete-destinatario" class="header-select"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="btn-back-upload" class="btn btn-secondary">Voltar</button>
+                    <button id="btn-process" class="btn btn-primary">Iniciar Conciliação</button>
+                </div>
+            </section>
+
+            <!-- Step 3: Results -->
+            <section id="step-results" class="card">
+                <div class="card-header">
+                    <h2><i data-lucide="line-chart"></i> Resultados da Análise</h2>
+                    <p>Resumo das divergências encontradas.</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">Documentos com Divergência</span>
+                            <span id="stat-total-divergencias" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-icon red"><i data-lucide="alert-circle"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">Valor Total Divergente</span>
+                            <span id="stat-valor-total" class="stat-value">R$ 0,00</span>
+                        </div>
+                        <div class="stat-icon amber"><i data-lucide="banknote"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">Faltantes no Frete</span>
+                            <span id="stat-total-faltantes" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-icon gray"><i data-lucide="file-minus"></i></div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="table-divergencias">
+                        <thead>
+                            <tr>
+                                <th>Documento</th>
+                                <th>Destinatário</th>
+                                <th>Valor Crédito</th>
+                                <th>Valor Frete</th>
+                                <th>Diferença</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="actions">
+                    <button id="btn-restart" class="btn btn-secondary">Nova Conciliação</button>
+                    <a href="/export" download class="btn btn-primary">
+                        <i data-lucide="download"></i> Exportar Resultados
+                    </a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
