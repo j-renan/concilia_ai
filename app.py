@@ -9,12 +9,28 @@ app.secret_key = 'concilia_ai_secret_key'
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+def limpar_uploads():
+    """Remove todos os arquivos da pasta uploads para economizar espaço."""
+    for filename in os.listdir(UPLOAD_FOLDER):
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                import shutil
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(f'Erro ao deletar {file_path}. Razão: {e}')
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
+    # Limpar envios anteriores antes de começar um novo
+    limpar_uploads()
+    
     if 'file_credito' not in request.files or 'file_frete' not in request.files:
         return jsonify({'error': 'Arquivos ausentes'}), 400
     
