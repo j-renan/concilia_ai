@@ -11,6 +11,15 @@
 <body>
     <div class="app-container">
         <header>
+            <div class="user-info">
+                <span>Bem-vindo, <strong>{{ current_user.username }}</strong></span>
+                <div class="user-actions">
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('register') }}" class="admin-link"><i data-lucide="user-plus"></i> Novo Usuário</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="logout-link"><i data-lucide="log-out"></i> Sair</a>
+                </div>
+            </div>
             <div class="logo">
                 <i data-lucide="calculator"></i>
                 <span>Concilia <strong>AI</strong></span>

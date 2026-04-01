@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Concilia AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .login-card {
+            max-width: 400px;
+            margin: 4rem auto;
+            display: block;
+        }
+        .flash-messages {
+            margin-bottom: 1.5rem;
+            list-style: none;
+            padding: 0;
+        }
+        .flash-message {
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            font-size: 0.875rem;
+            text-align: center;
+            border: 1px solid var(--error);
+        }
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <i data-lucide="calculator"></i>
+                <span>Concilia <strong>AI</strong></span>
+            </div>
+            <p class="subtitle">Faça login para acessar o painel de conciliação.</p>
+        </header>
+
+        <main>
+            <section class="card login-card active">
+                <div class="card-header">
+                    <h2><i data-lucide="log-in"></i> Autenticação</h2>
+                </div>
+
+                {% with messages = get_flashed_messages() %}
+                  {% if messages %}
+                    <ul class="flash-messages">
+                      {% for message in messages %}
+                        <li class="flash-message">{{ message }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                {% endwith %}
+
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="username">Usuário</label>
+                        <input type="text" id="username" name="username" class="header-select" required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Senha</label>
+                        <input type="password" id="password" name="password" class="header-select" required>
+                    </div>
+                    
+                    <label class="remember-me">
+                        <input type="checkbox" name="remember">
+                        Lembrar-me neste dispositivo
+                    </label>
+
+                    <div class="actions">
+                        <button type="submit" class="btn btn-primary">Entrar</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

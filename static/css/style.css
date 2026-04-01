@@ -40,6 +40,47 @@ body {
 header {
     text-align: center;
     margin-bottom: 2.5rem;
+    position: relative;
+}
+
+.user-info {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.875rem;
+}
+
+.user-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.user-actions a {
+    text-decoration: none;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: color 0.2s ease;
+}
+
+.user-actions a:hover {
+    color: var(--primary);
+}
+
+.logout-link:hover {
+    color: var(--error) !important;
+}
+
+.admin-link {
+    background: rgba(37, 99, 235, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+    color: var(--primary) !important;
 }
 
 .logo {
