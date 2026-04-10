@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +9,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
     <div class="app-container">
         <header>
+            <div class="user-info">
+                <span>Bem-vindo, <strong>{{ current_user.username }}</strong></span>
+                <div class="user-actions">
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('register') }}" class="admin-link"><i data-lucide="user-plus"></i> Novo
+                        Usuário</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="logout-link"><i data-lucide="log-out"></i> Sair</a>
+                </div>
+            </div>
             <div class="logo">
                 <i data-lucide="calculator"></i>
                 <span>Concilia <strong>AI</strong></span>
@@ -25,7 +37,7 @@
                     <h2><i data-lucide="upload-cloud"></i> Upload de Arquivos</h2>
                     <p>Selecione as planilhas de crédito e frete para iniciar.</p>
                 </div>
-                
+
                 <div class="upload-grid">
                     <div class="upload-box" id="drop-credito">
                         <input type="file" id="file-credito" hidden accept=".xlsx, .xls">
@@ -33,7 +45,7 @@
                         <p>Planilha de Crédito</p>
                         <span class="file-name">Nenhum arquivo selecionado</span>
                     </div>
-                    
+
                     <div class="upload-box" id="drop-frete">
                         <input type="file" id="file-frete" hidden accept=".xlsx, .xls">
                         <i data-lucide="truck"></i>
@@ -119,7 +131,14 @@
                     <div class="stat-card">
                         <div class="stat-info">
                             <span class="stat-label">Faltantes no Frete</span>
-                            <span id="stat-total-faltantes" class="stat-value">0</span>
+                            <span id="stat-frete-total-faltantes" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-icon gray"><i data-lucide="file-minus"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">Faltantes no Crédito</span>
+                            <span id="stat-credito-total-faltantes" class="stat-value">0</span>
                         </div>
                         <div class="stat-icon gray"><i data-lucide="file-minus"></i></div>
                     </div>
@@ -134,6 +153,7 @@
                                 <th>Valor Crédito</th>
                                 <th>Valor Frete</th>
                                 <th>Diferença</th>
+                                <th>Observação</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -156,4 +176,5 @@
         lucide.createIcons();
     </script>
 </body>
+
 </html>
