@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const populateSelects = () => {
         const populate = (id, options) => {
             const select = document.getElementById(id);
-            select.innerHTML = '<option value="">Selecione uma coluna...</option>' + 
+            select.innerHTML = '<option value="">Selecione uma coluna...</option>' +
                 options.map(h => `<option value="${h}">${h}</option>`).join('');
         };
 
@@ -101,17 +101,21 @@ document.addEventListener('DOMContentLoaded', () => {
         populate('map-frete-documento', headers.frete);
         populate('map-frete-valor', headers.frete);
         populate('map-frete-destinatario', headers.frete);
-        
+
         // Auto-select common names if they exist
         autoMap();
     };
 
     const autoMap = () => {
+        const normalize = (str) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
         const trySelect = (id, patterns) => {
             const select = document.getElementById(id);
-            const options = [...select.options].map(o => o.value.toLowerCase());
+            const normalizedOptions = [...select.options].map(o => normalize(o.value));
+
             for (let p of patterns) {
-                const idx = options.findIndex(o => o.includes(p.toLowerCase()));
+                const normP = normalize(p);
+                const idx = normalizedOptions.findIndex(o => o.includes(normP));
                 if (idx !== -1) {
                     select.selectedIndex = idx;
                     break;
@@ -120,9 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         trySelect('map-credito-historico', ['histórico', 'memo', 'descrição']);
-        trySelect('map-credito-valor', ['crédito', 'valor', 'total']);
-        trySelect('map-frete-documento', ['documento', 'cte', 'número']);
-        trySelect('map-frete-valor', ['valor frete', 'valor', 'frete']);
+        trySelect('map-credito-valor', ['crédito', 'valor', 'total', 'vl']);
+        trySelect('map-frete-documento', ['documento', 'cte', 'número', 'docto']);
+        trySelect('map-frete-valor', ['valor frete', 'valor', 'frete', 'vl']);
         trySelect('map-frete-destinatario', ['destinatário', 'cliente', 'nome']);
     };
 
@@ -174,23 +178,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderResults = (data) => {
         document.getElementById('stat-total-divergencias').textContent = data.summary.total_divergencias;
         document.getElementById('stat-valor-total').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.summary.valor_total_divergencia);
-        document.getElementById('stat-total-faltantes').textContent = data.summary.total_credito_sem_frete;
+        document.getElementById('stat-credito-total-faltantes').textContent = data.summary.total_credito_sem_frete;
+        document.getElementById('stat-frete-total-faltantes').textContent = data.summary.total_frete_sem_credito;
 
         tableBody.innerHTML = '';
         data.divergencias.forEach(row => {
             const tr = document.createElement('tr');
+            // Garantir que valores nulos sejam tratados como 0 para o formatador
+            const valCredito = row['Valor Crédito'] || 0;
+            const valFrete = row['Valor Frete'] || 0;
+            const diferenca = row.Diferença || 0;
+
             tr.innerHTML = `
                 <td><strong>${row.Documento}</strong></td>
                 <td>${row.Destinatário || '-'}</td>
-                <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row.Crédito)}</td>
-                <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row['Valor Frete'])}</td>
-                <td style="color: var(--error); font-weight: 600;">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row.Diferença)}</td>
+                <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valCredito)}</td>
+                <td>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valFrete)}</td>
+                <td style="color: var(--error); font-weight: 600;">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(diferenca)}</td>
+                <td style="font-size: 0.8rem; color: var(--text-muted);">${row.Observação}</td>
             `;
             tableBody.appendChild(tr);
         });
 
         if (data.divergencias.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Nenhuma divergência encontrada! ✅</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">Nenhuma divergência encontrada! ✅</td></tr>';
         }
     };
 
