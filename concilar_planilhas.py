@@ -1,127 +1,156 @@
 import pandas as pd
 import re
 
-
 def comparar_fretes(arquivo_credito, arquivo_frete, mapping=None):
-    """
-    Compara os valores de crédito e frete entre duas planilhas com mapeamento flexível.
 
-    Parâmetros:
-    - arquivo_credito: caminho ou buffer da planilha de crédito
-    - arquivo_frete: caminho ou buffer da planilha de frete
-    - mapping: dicionário com o mapeamento das colunas
-        {
-            'credito': {'historico': '...', 'valor': '...'},
-            'frete': {'documento': '...', 'valor': '...', 'destinatario': '...'}
-        }
-    """
-    
-    # Mapeamento padrão caso não seja fornecido
     if mapping is None:
         mapping = {
             'credito': {'historico': 'Histórico', 'valor': 'Crédito'},
             'frete': {'documento': 'Documento', 'valor': 'Valor Frete', 'destinatario': 'Destinatário'}
         }
 
-    # ==================== LEITURA DAS PLANILHAS ====================
     df_credito = pd.read_excel(arquivo_credito)
     df_frete = pd.read_excel(arquivo_frete)
 
-    # Identificar colunas baseadas no mapeamento
-    col_hist_cred = mapping['credito']['historico']
-    col_val_cred = mapping['credito']['valor']
-    
-    col_doc_frete = mapping['frete']['documento']
-    col_val_frete = mapping['frete']['valor']
-    col_dest_frete = mapping['frete']['destinatario']
+    df_credito.columns = [c.strip() for c in df_credito.columns]
+    df_frete.columns = [c.strip() for c in df_frete.columns]
 
-    # ==================== EXTRAIR NÚMERO DO DOCUMENTO DO HISTÓRICO ====================
+    col_hist_cred = str(mapping['credito']['historico']).strip()
+    col_val_cred = str(mapping['credito']['valor']).strip()
+
+    col_doc_frete = str(mapping['frete']['documento']).strip()
+    col_val_frete = str(mapping['frete']['valor']).strip()
+    col_dest_frete = str(mapping['frete']['destinatario']).strip() if mapping['frete']['destinatario'] else None
+
+    # ==================== FUNÇÕES ====================
+
+    def limpar_valor(val):
+        if pd.isna(val) or val == '':
+            return None
+
+        if isinstance(val, (int, float)):
+            return float(val)
+
+        s = str(val).strip().upper().replace('R$', '').replace('$', '')
+
+        if s.startswith('(') and s.endswith(')'):
+            s = '-' + s[1:-1]
+
+        s = re.sub(r'[^0-9,.-]', '', s)
+
+        if not s or s in ['-', '.', ',']:
+            return None
+
+        try:
+            if ',' in s and '.' in s:
+                if s.rfind(',') > s.rfind('.'):
+                    s = s.replace('.', '').replace(',', '.')
+                else:
+                    s = s.replace(',', '')
+            elif ',' in s:
+                s = s.replace(',', '.')
+            elif s.count('.') > 1:
+                s = s.replace('.', '')
+
+            return float(s)
+        except:
+            return None
+
     def extrair_numero_cte(historico):
         if pd.isna(historico):
             return None
-        match = re.search(r'CTE N\.\s*(\d+)', str(historico))
+
+        texto = str(historico)
+        match = re.search(r'(?:CTE|NFP|NF)[^\d]*(\d+)', texto)
+
         if match:
-            return int(match.group(1))
+            numero = match.group(1).lstrip('0')
+            return int(numero) if numero else None
+
         return None
 
-    df_credito['Documento_Extraido'] = df_credito[col_hist_cred].apply(extrair_numero_cte)
+    # ==================== PREPARAÇÃO ====================
 
-    # ==================== LIMPEZA DOS DADOS ====================
-    df_credito = df_credito.dropna(subset=['Documento_Extraido'])
-    df_credito['Documento_Extraido'] = df_credito['Documento_Extraido'].astype(int)
+    df_credito['ID_DOC'] = df_credito[col_hist_cred].apply(extrair_numero_cte)
+    df_credito = df_credito.dropna(subset=['ID_DOC'])
+    df_credito['ID_DOC'] = df_credito['ID_DOC'].astype(int)
+    df_credito['VALOR_LIMPO'] = df_credito[col_val_cred].apply(limpar_valor)
 
-    # Garantir que os documentos no df_frete sejam inteiros e remover NaNs
-    df_frete = df_frete.dropna(subset=[col_doc_frete])
-    df_frete[col_doc_frete] = df_frete[col_doc_frete].astype(int)
+    df_frete['ID_DOC'] = pd.to_numeric(df_frete[col_doc_frete], errors='coerce')
+    df_frete = df_frete.dropna(subset=['ID_DOC'])
+    df_frete['ID_DOC'] = df_frete['ID_DOC'].astype(int)
+    df_frete['VALOR_LIMPO'] = df_frete[col_val_frete].apply(limpar_valor)
 
-    # ==================== REALIZAR O MERGE ====================
+    # ==================== SEQ ====================
+
+    df_credito['SEQ'] = df_credito.groupby('ID_DOC').cumcount()
+    df_frete['SEQ'] = df_frete.groupby('ID_DOC').cumcount()
+
+    # ==================== MERGE ====================
+
     df_comparacao = df_credito.merge(
-        df_frete[[col_doc_frete, col_val_frete, col_dest_frete]],
-        left_on='Documento_Extraido',
-        right_on=col_doc_frete,
-        how='inner'
+        df_frete,
+        on=['ID_DOC', 'SEQ'],
+        how='outer',
+        suffixes=('_CRED', '_FRETE'),
+        indicator=True
     )
 
-    # ==================== CALCULAR DIFERENÇAS ====================
-    df_comparacao['Diferença'] = df_comparacao[col_val_cred] - df_comparacao[col_val_frete]
+    # ==================== CAMPOS ====================
+
+    df_comparacao['Documento'] = df_comparacao['ID_DOC']
+
+    df_comparacao['Valor Crédito'] = df_comparacao['VALOR_LIMPO_CRED']
+    df_comparacao['Valor Frete'] = df_comparacao['VALOR_LIMPO_FRETE']
+
+    if col_dest_frete and col_dest_frete in df_comparacao.columns:
+        df_comparacao['Destinatário'] = df_comparacao[col_dest_frete].fillna('-')
+    else:
+        df_comparacao['Destinatário'] = '-'
+
+    df_comparacao['Diferença'] = (
+        df_comparacao['Valor Crédito'].fillna(0) -
+        df_comparacao['Valor Frete'].fillna(0)
+    )
+
     df_comparacao['Diferença_Abs'] = df_comparacao['Diferença'].abs()
 
-    # ==================== IDENTIFICAR DIVERGÊNCIAS ====================
-    divergencias = df_comparacao[df_comparacao['Diferença_Abs'] > 0.01].copy()
+    # ==================== OBS ====================
 
-    # ==================== VERIFICAR DOCUMENTOS FALTANTES ====================
-    documentos_credito_sem_frete = set(df_credito['Documento_Extraido']) - set(df_frete[col_doc_frete])
-    documentos_frete_sem_credito = set(df_frete[col_doc_frete]) - set(df_credito['Documento_Extraido'])
+    def aplicar_obs(row):
+        if row['_merge'] == 'left_only':
+            return '❌ Não encontrado na Planilha de Frete'
+        if row['_merge'] == 'right_only':
+            return '❌ Não encontrado na Planilha de Crédito'
+        if row['Diferença_Abs'] > 0.01:
+            return '⚠️ Divergência de Valor'
+        return '✅ OK'
 
-    # ==================== FORMATAR RESULTADOS ====================
+    df_comparacao['Observação'] = df_comparacao.apply(aplicar_obs, axis=1)
+
+    # ==================== FILTRO ====================
+
+    divergencias = df_comparacao[
+        (df_comparacao['Diferença_Abs'] > 0.01) |
+        (df_comparacao['_merge'] != 'both')
+    ].copy()
+
     if not divergencias.empty:
         divergencias = divergencias.sort_values('Diferença_Abs', ascending=False)
-        # Renomear para colunas amigáveis no resultado final
-        divergencias = divergencias.rename(columns={
-            'Documento_Extraido': 'Documento',
-            col_val_cred: 'Crédito',
-            col_val_frete: 'Valor Frete',
-            col_dest_frete: 'Destinatário'
-        })
-        divergencias = divergencias[['Documento', 'Crédito', 'Valor Frete', 'Diferença', 'Destinatário']]
+        divergencias['Documento'] = divergencias['Documento'].astype(str)
 
-    return divergencias, documentos_credito_sem_frete, documentos_frete_sem_credito
+        colunas_final = [
+            'Documento',
+            'Valor Crédito',
+            'Valor Frete',
+            'Diferença',
+            'Destinatário',
+            'Observação'
+        ]
 
+        divergencias = divergencias[[c for c in colunas_final if c in divergencias.columns]]
 
-def gerar_planilha_diferencas(divergencias, arquivo_saida='divergencias_frete.xlsx'):
-    """
-    Gera uma planilha com as divergências encontradas.
-    """
-    if divergencias.empty:
-        print("✅ Nenhuma divergência encontrada para exportar.")
-        return
+    docs_credito_sem_frete = df_comparacao[df_comparacao['_merge'] == 'left_only']['ID_DOC'].astype(str).unique().tolist()
+    docs_frete_sem_credito = df_comparacao[df_comparacao['_merge'] == 'right_only']['ID_DOC'].astype(str).unique().tolist()
 
-    divergencias.to_excel(arquivo_saida, index=False)
-    print(f"\n📁 Planilha com divergências salva em: {arquivo_saida}")
-
-
-# ==================== EXEMPLO DE USO ====================
-if __name__ == "__main__":
-    # Substitua pelos caminhos reais dos seus arquivos
-    arquivo_credito = "01-102025.xlsx"
-    arquivo_frete = "val.xlsx"
-
-    # Executar a comparação
-    divergencias, docs_credito_sem_frete, docs_frete_sem_credito = comparar_fretes(
-        arquivo_credito,
-        arquivo_frete
-    )
-
-    # Exibir divergências detalhadas
-    if not divergencias.empty:
-        print("\n" + "=" * 80)
-        print("DIVERGÊNCIAS DETALHADAS:")
-        print("=" * 80)
-        print(divergencias.to_string(index=False))
-
-        # Salvar planilha com divergências
-        gerar_planilha_diferencas(divergencias)
-
-    print("\n" + "=" * 80)
-    print("ANÁLISE CONCLUÍDA!")
-    print("=" * 80)
+    return divergencias, docs_credito_sem_frete, docs_frete_sem_credito

@@ -128,26 +128,29 @@ def upload_files():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+import json
+
 @app.route('/process', methods=['POST'])
 @login_required
 def process():
     mapping = request.json.get('mapping')
     path_credito = session.get('path_credito')
     path_frete = session.get('path_frete')
-    
+
     if not all([mapping, path_credito, path_frete]):
         return jsonify({'error': 'Dados de processamento ausentes'}), 400
-    
+
     try:
         divergencias, docs_credito_sem_frete, docs_frete_sem_credito = comparar_fretes(
             path_credito, path_frete, mapping
         )
-        
+
         user_folder = get_user_folder()
         export_path = os.path.join(user_folder, f"divergencias_{datetime.now().timestamp()}.xlsx")
         divergencias.to_excel(export_path, index=False)
         session['export_path'] = export_path
-        
+
         return jsonify({
             'summary': {
                 'total_divergencias': len(divergencias),
@@ -155,10 +158,12 @@ def process():
                 'total_frete_sem_credito': len(docs_frete_sem_credito),
                 'valor_total_divergencia': float(divergencias['Diferença'].sum()) if not divergencias.empty else 0
             },
-            'divergencias': divergencias.to_dict(orient='records'),
-            'docs_credito_sem_frete': list(docs_credito_sem_frete),
-            'docs_frete_sem_credito': list(docs_frete_sem_credito)
+            # ✅ CORREÇÃO DEFINITIVA AQUI
+            'divergencias': json.loads(divergencias.to_json(orient='records')),
+            'docs_credito_sem_frete': docs_credito_sem_frete,
+            'docs_frete_sem_credito': docs_frete_sem_credito
         })
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
