@@ -5,6 +5,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from models import db, User
 from concilar_planilhas import comparar_fretes
 from datetime import datetime
+from utils import ler_arquivo
 
 app = Flask(__name__)
 app.secret_key = 'concilia_ai_secret_key'
@@ -105,15 +106,18 @@ def upload_files():
     if file_credito.filename == '' or file_frete.filename == '':
         return jsonify({'error': 'Nenhum arquivo selecionado'}), 400
 
-    path_credito = os.path.join(user_folder, f"credito_{datetime.now().timestamp()}.xlsx")
-    path_frete = os.path.join(user_folder, f"frete_{datetime.now().timestamp()}.xlsx")
+    ext_credito = os.path.splitext(file_credito.filename)[1]
+    ext_frete = os.path.splitext(file_frete.filename)[1]
+    
+    path_credito = os.path.join(user_folder, f"credito_{datetime.now().timestamp()}{ext_credito}")
+    path_frete = os.path.join(user_folder, f"frete_{datetime.now().timestamp()}{ext_frete}")
     
     file_credito.save(path_credito)
     file_frete.save(path_frete)
     
     try:
-        df_credito = pd.read_excel(path_credito, nrows=0)
-        df_frete = pd.read_excel(path_frete, nrows=0)
+        df_credito = ler_arquivo(path_credito, nrows=0)
+        df_frete = ler_arquivo(path_frete, nrows=0)
         
         headers_credito = df_credito.columns.tolist()
         headers_frete = df_frete.columns.tolist()

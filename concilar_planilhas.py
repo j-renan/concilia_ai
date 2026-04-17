@@ -1,5 +1,6 @@
 import pandas as pd
 import re
+from utils import ler_arquivo
 
 def comparar_fretes(arquivo_credito, arquivo_frete, mapping=None):
 
@@ -9,8 +10,8 @@ def comparar_fretes(arquivo_credito, arquivo_frete, mapping=None):
             'frete': {'documento': 'Documento', 'valor': 'Valor Frete', 'destinatario': 'Destinatário'}
         }
 
-    df_credito = pd.read_excel(arquivo_credito)
-    df_frete = pd.read_excel(arquivo_frete)
+    df_credito = ler_arquivo(arquivo_credito)
+    df_frete = ler_arquivo(arquivo_frete)
 
     df_credito.columns = [c.strip() for c in df_credito.columns]
     df_frete.columns = [c.strip() for c in df_frete.columns]
